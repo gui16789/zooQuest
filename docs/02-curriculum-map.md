@@ -2,7 +2,7 @@
 
 日期：2026-05-11  
 适用对象：中国小学二年级下册学生  
-教材边界：语文参考统编/人教版二年级下册，数学参考北师大版二年级下册。
+教材边界：语文参考统编/人教版二年级下册，数学参考北师大版二年级下册，英语参考《新启航英语》二年级下册。
 
 ## 1. 设计原则
 
@@ -10,7 +10,7 @@
 - 每个案件绑定 1 个主知识点，最多 2 个辅助知识点。
 - 题型优先使用孩子容易理解的动作：找、连、排、分、量、选、说。
 - 一次任务只考一个动作，Boss 战才做综合。
-- 语文和数学可以混合在一个案件里，但结案报告必须能拆开统计。
+- 语文、数学、英语可以混合在一个案件里，但结案报告必须能拆开统计。
 
 ## 2. 语文知识点地图
 
@@ -89,16 +89,19 @@
 - 足迹测量：长度单位。
 - 巡逻排班：时分秒。
 
-### 推理表达课
+### 英语通讯课
 
-目标：把语文表达和数学信息整合成推理。
+目标：用低龄孩子可理解的听、看、选、说任务复习英语主题词汇和核心句型。
 
 首批关卡：
 
-- 线索归档：按类别整理线索。
-- 嫌疑人排查：根据条件排除。
-- 结案说明：用一句或两句话说明理由。
-- 推荐动画片/故事：训练口语表达和完整句。
+- 能力徽章站：Can you ...? / Yes, I can. / No, I can't.
+- 季节气象站：spring, summer, autumn, winter 与 warm, hot, cool, cold。
+- 服装证物间：dress, coat, skirt, shirt, T-shirt, shorts, trousers。
+- 课程表档案室：Chinese, English, PE, music, maths, art。
+- 星期巡逻表：Monday 到 Sunday 与 week/weekend 主题表达。
+
+英语详细知识点、题型和首批题库见 [05-english-curriculum-and-questions.md](./05-english-curriculum-and-questions.md)。
 
 ## 5. MVP 案件包
 
@@ -192,8 +195,8 @@
 
 ```ts
 type LearningObjective = {
-  subject: 'chinese' | 'math' | 'reasoning';
-  textbook: '统编语文二下' | '北师大数学二下' | '原创综合';
+  subject: 'chinese' | 'math' | 'english' | 'reasoning';
+  textbook: '统编语文二下' | '北师大数学二下' | '新启航英语二下' | '原创综合';
   unit: string;
   knowledgePoint: string;
   difficulty: 'A' | 'B' | 'C';
