@@ -1,4 +1,4 @@
-import { CSSProperties, useMemo, useState } from 'react';
+import { CSSProperties, ReactNode, useMemo, useState } from 'react';
 import { chapters, mentors, openingCase, questionById } from './data/story';
 import {
   answerQuestion,
@@ -173,64 +173,20 @@ function StoryTopBar({
 
 function HomeScreen({ onEnroll }: { onEnroll: () => void }) {
   return (
-    <main className="official-home">
-      <section className="academy-site">
-        <header className="site-header">
-          <div className="brand-lockup">
-            <AcademyCrest />
-            <div>
-              <h1>ZooQuest 动物城市警探学院</h1>
-              <p>故事驱动 · 探案解谜 · 知识学习 · 成长徽章</p>
-            </div>
-          </div>
-          <div className="mentor-roster" aria-label="三位导师">
-            {mentors.map((mentor) => (
-              <MentorMedallion key={mentor.id} mentor={mentor} />
-            ))}
-          </div>
-        </header>
-
-        <nav className="website-tabs" aria-label="学院官网栏目">
-          <a href="#academy">首页</a>
-          <a href="#courses">学院介绍</a>
-          <a href="#missions">课题与探索</a>
-          <a href="#enroll">学员风采</a>
-          <a href="#care">家长中心</a>
-        </nav>
-
-        <div className="hero-website" id="academy">
-          <div className="hero-copy">
-            <p className="eyebrow">新生招募 · 第一季</p>
-            <h2>欢迎来到动物城市警探学院！</h2>
-            <p>
-              在这里学习知识、搜集线索，破解“知识灯塔失光案”，从见习探员成长为传奇预备警探。
-            </p>
-            <button className="gold-action" onClick={onEnroll}>
-              加入警探学院
-              <span className="material-symbols-outlined">pets</span>
-            </button>
-          </div>
-          <AcademyIllustration />
-        </div>
-
-        <div className="quick-entry" id="missions">
-          <FeatureButton icon="menu_book" title="学习课程" copy="三科知识变线索" />
-          <FeatureButton icon="search" title="探索任务" copy="公告、证物、暗号" />
-          <FeatureButton icon="map" title="城市地图" copy="章节区域逐步开放" />
-          <FeatureButton icon="workspace_premium" title="勋章成就" copy="记录成长和复盘" />
-        </div>
-
-        <section className="course-band" id="courses">
+    <main className="reference-page home-reference-page">
+      <ReferenceFrame image="/ui-reference/home-reference.png" label="ZooQuest 动物城市警探学院官网首页">
+        <button className="ref-hotspot home-join-hotspot" onClick={onEnroll}>
+          加入警探学院
+          <span className="material-symbols-outlined">pets</span>
+        </button>
+        <div className="home-live-mentor-strip" aria-label="课程导师">
           {mentors.map((mentor) => (
-            <article key={mentor.id} className="mentor-card" style={{ '--mentor-color': mentor.color } as CSSProperties}>
-              <div className="mentor-portrait">{mentor.portrait}</div>
-              <p>{mentor.title}</p>
-              <h3>{mentor.name}</h3>
-              <span>{mentor.motto}</span>
-            </article>
+            <span key={mentor.id} style={{ '--mentor-color': mentor.color } as CSSProperties}>
+              {mentor.portrait} {mentor.title}
+            </span>
           ))}
-        </section>
-      </section>
+        </div>
+      </ReferenceFrame>
     </main>
   );
 }
@@ -240,57 +196,35 @@ function EnrollScreen({ onSubmit }: { onSubmit: (name: string) => void }) {
   const avatars = ['狐', '兔', '熊'];
 
   return (
-    <main className="enroll-screen">
-      <section className="enroll-desk">
-        <div className="clipboard profile-board">
-          <div className="clip" />
-          <p className="eyebrow">学员入学档案</p>
-          <h1>先建立你的探员档案。</h1>
-          <label>
-            学员姓名
-            <input value={name} onChange={(event) => setName(event.target.value)} maxLength={8} />
-          </label>
-          <div className="field-row">
-            <label>
-              性别
-              <select defaultValue="保密">
-                <option>保密</option>
-                <option>男孩</option>
-                <option>女孩</option>
-              </select>
-            </label>
-            <label>
-              年级
-              <select defaultValue="二年级">
-                <option>二年级</option>
-                <option>一年级</option>
-                <option>三年级</option>
-              </select>
-            </label>
+    <main className="reference-page">
+      <ReferenceFrame image="/ui-reference/enroll-reference.png" label="学员入学档案页面">
+        <form className="enroll-live-form" onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit(name);
+        }}>
+          <label className="sr-only" htmlFor="cadet-name">学员姓名</label>
+          <input id="cadet-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={8} />
+          <div className="enroll-live-row">
+            <button type="button" className="selected">男孩</button>
+            <button type="button">女孩</button>
           </div>
-          <label>
-            入学宣言
-            <textarea defaultValue="我想成为一名会思考的小警探。" maxLength={30} />
-          </label>
-          <button className="green-action" onClick={() => onSubmit(name)}>
+          <select defaultValue="二年级" aria-label="年级">
+            <option>二年级</option>
+            <option>一年级</option>
+            <option>三年级</option>
+          </select>
+          <textarea defaultValue="我想成为一名会思考的小警探。" maxLength={30} aria-label="入学宣言" />
+          <button className="ref-hotspot enroll-submit-hotspot" type="submit">
             成为学员
             <span className="material-symbols-outlined">pets</span>
           </button>
+        </form>
+        <div className="avatar-hotspots" aria-label="选择我的形象">
+          {avatars.map((avatar) => (
+            <button key={avatar} className={avatar === '狐' ? 'active' : ''}>{avatar}</button>
+          ))}
         </div>
-
-        <aside className="avatar-board">
-          <div className="cadet-photo">
-            <span>狐</span>
-          </div>
-          <b>选择我的形象</b>
-          <div className="avatar-list">
-            {avatars.map((avatar) => (
-              <button key={avatar} className={avatar === '狐' ? 'active' : ''}>{avatar}</button>
-            ))}
-          </div>
-          <p>MVP 仅保存在本机浏览器，不收集真实姓名、学校或照片。</p>
-        </aside>
-      </section>
+      </ReferenceFrame>
     </main>
   );
 }
@@ -334,39 +268,19 @@ function MapScreen({ progress, onOpenCase }: { progress: Progress; onOpenCase: (
   const firstCaseDone = progress.completedCases.includes(openingCase.id);
 
   return (
-    <main className="map-screen">
-      <section className="storybook-map">
-        <div className="map-canvas">
-          <div className="map-label city">动物城市</div>
-          <div className="route route-one" />
-          <div className="route route-two" />
-          {chapters.map((chapter, index) => {
-            const open = chapter.status === 'open' || (chapter.requiredBadge && progress.badges.includes(chapter.requiredBadge));
-            return (
-              <button
-                key={chapter.id}
-                className={`map-node node-${index + 1} ${open ? 'open' : 'locked'}`}
-                onClick={index === 0 ? onOpenCase : undefined}
-                disabled={index !== 0}
-              >
-                <span className="node-dot">{index + 1}</span>
-                <b>{chapter.area}</b>
-                <small>{index === 0 ? (firstCaseDone ? '复盘第一章' : '进入第一章') : '后续开放'}</small>
-              </button>
-            );
-          })}
-          <div className="map-landmark academy">学院校园</div>
-          <div className="map-landmark lighthouse">知识灯塔</div>
-          <div className="map-landmark harbor">码头港湾</div>
-        </div>
-
-        <aside className="map-progress">
-          <CompassIcon />
-          <p>探案进度</p>
+    <main className="reference-page map-reference-page">
+      <ReferenceFrame image="/ui-reference/map-reference.png" label="动物城市地图">
+        <button className="map-case-hotspot" onClick={onOpenCase}>
+          {firstCaseDone ? '复盘第一章' : '知识灯塔'}
+        </button>
+        <div className="map-progress-live">
+          <span>探案进度</span>
           <strong>{progress.completedCases.length ? '1/4' : '0/4'}</strong>
-          <span>{getRank(progress.xp)}</span>
-        </aside>
-      </section>
+        </div>
+        <div className="map-back-live" aria-hidden="true">
+          <span className="material-symbols-outlined">arrow_back</span>
+        </div>
+      </ReferenceFrame>
     </main>
   );
 }
@@ -385,21 +299,18 @@ function CaseScreen({
   onBoss: () => void;
 }) {
   return (
-    <main className="case-screen">
-      <aside className="case-file">
-        <p className="eyebrow">{openingCase.subtitle}</p>
-        <h1>{openingCase.title}</h1>
-        <p>{openingCase.mystery}</p>
-        <ProgressRail current={progress.activeQuestionIndex} total={openingCase.clueQuestionIds.length} label="线索收集" />
-      </aside>
-      <section className="question-zone">
+    <main className="reference-page case-reference-page">
+      <ReferenceFrame image="/ui-reference/case-reference.png" label="线索挑战页面">
+        <div className="case-progress-live">
+          线索 {Math.min(progress.activeQuestionIndex + 1, openingCase.clueQuestionIds.length)}/{openingCase.clueQuestionIds.length}
+        </div>
         {question ? (
-          <QuestionPanel key={question.id} question={question} onAnswer={(selected) => onAnswer(question, selected)} />
+          <QuestionOverlay key={question.id} question={question} onAnswer={(selected) => onAnswer(question, selected)} />
         ) : (
-          <CompletionPanel title="三条线索已经收齐" copy="现在可以进入 Boss 关，修复知识灯塔。" action="进入 Boss 关" onAction={onBoss} />
+          <button className="ref-hotspot case-submit-hotspot" onClick={onBoss}>进入 Boss 关</button>
         )}
-        {lastResult && <FeedbackPanel result={lastResult} />}
-      </section>
+        {lastResult && <FeedbackToast result={lastResult} />}
+      </ReferenceFrame>
     </main>
   );
 }
@@ -509,6 +420,74 @@ function ReportScreen({ progress, onMap, onRestart }: { progress: Progress; onMa
         )}
       </section>
     </main>
+  );
+}
+
+function ReferenceFrame({
+  image,
+  label,
+  children
+}: {
+  image: string;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="reference-frame" aria-label={label}>
+      <img src={image} alt="" aria-hidden="true" />
+      <div className="reference-layer">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function QuestionOverlay({ question, onAnswer }: { question: Question; onAnswer: (selected: string | string[]) => void }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const mentor = mentors.find((item) => item.subject === question.subject)!;
+
+  return (
+    <section className="question-live-card" style={{ '--mentor-color': mentor.color } as CSSProperties}>
+      <header>
+        <span>{mentor.portrait}</span>
+        <div>
+          <b>{subjectName[question.subject]}</b>
+          <h2>{question.title}</h2>
+        </div>
+      </header>
+      <p>{question.story}</p>
+      <h3>{question.prompt}</h3>
+      <div className="question-live-options">
+        {question.options.map((option, index) => (
+          <button
+            key={option}
+            className={selected === option ? 'selected' : ''}
+            onClick={() => setSelected(option)}
+          >
+            <b>{String.fromCharCode(65 + index)}.</b>
+            {option}
+            <i />
+          </button>
+        ))}
+      </div>
+      <div className="question-live-hint">
+        <span className="material-symbols-outlined">tips_and_updates</span>
+        {question.hint}
+      </div>
+      <button className="ref-hotspot case-submit-hotspot" disabled={!selected} onClick={() => selected && onAnswer(selected)}>
+        提交线索
+        <span className="material-symbols-outlined">pets</span>
+      </button>
+    </section>
+  );
+}
+
+function FeedbackToast({ result }: { result: { question: Question; correct: boolean } }) {
+  return (
+    <aside className={`feedback-toast ${result.correct ? 'right' : 'wrong'}`}>
+      <b>{result.correct ? '线索有效' : '线索需要复查'}</b>
+      <span>{result.question.explanation}</span>
+    </aside>
   );
 }
 
