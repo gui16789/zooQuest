@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "mvp:dev": "vite --config apps/zooquest-mvp/vite.config.ts",
+    "mvp:typecheck": "tsc -p apps/zooquest-mvp/tsconfig.json --noEmit",
+    "mvp:build": "vite build --config apps/zooquest-mvp/vite.config.ts",
+    "mvp:preview": "vite preview --config apps/zooquest-mvp/vite.config.ts",
     "typecheck": "tsc --noEmit",
     "build": "vite build",
     "preview": "vite preview"
@@ -15,6 +19,8 @@
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
