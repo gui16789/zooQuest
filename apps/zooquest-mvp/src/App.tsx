@@ -1,4 +1,4 @@
-import { CSSProperties, ReactNode, useMemo, useState } from 'react';
+import { CSSProperties, useMemo, useState } from 'react';
 import { chapters, mentors, openingCase, questionById } from './data/story';
 import {
   answerQuestion,
@@ -9,6 +9,8 @@ import {
   initialProgress
 } from './domain/progress';
 import { Progress, Question, Screen } from './types';
+
+const ASSET = '/assets/story/';
 
 const subjectName = {
   chinese: '语文侦查',
@@ -21,6 +23,13 @@ const subjectIcon = {
   math: 'calculate',
   english: 'forum'
 } as const;
+
+const markerPositions = [
+  { left: '31%', top: '63%' },
+  { left: '29%', top: '28%' },
+  { left: '74%', top: '27%' },
+  { left: '66%', top: '70%' }
+];
 
 function getStoredProgress(): Progress {
   try {
@@ -173,58 +182,136 @@ function StoryTopBar({
 
 function HomeScreen({ onEnroll }: { onEnroll: () => void }) {
   return (
-    <main className="reference-page home-reference-page">
-      <ReferenceFrame image="/ui-reference/home-reference.png" label="ZooQuest 动物城市警探学院官网首页">
-        <button className="ref-hotspot home-join-hotspot" onClick={onEnroll}>
-          加入警探学院
-          <span className="material-symbols-outlined">pets</span>
-        </button>
-        <div className="home-live-mentor-strip" aria-label="课程导师">
-          {mentors.map((mentor) => (
-            <span key={mentor.id} style={{ '--mentor-color': mentor.color } as CSSProperties}>
-              {mentor.portrait} {mentor.title}
-            </span>
-          ))}
-        </div>
-      </ReferenceFrame>
+    <main className="official-home">
+      <section className="academy-site">
+        <header className="site-header">
+          <div className="brand-lockup">
+            <AcademyCrest />
+            <div>
+              <h1>ZooQuest 动物城市警探学院</h1>
+              <p>故事驱动 · 探案解谜 · 知识学习 · 成长徽章</p>
+            </div>
+          </div>
+          <div className="mentor-roster" aria-label="三位导师">
+            {mentors.map((mentor) => (
+              <MentorMedallion key={mentor.id} mentor={mentor} />
+            ))}
+          </div>
+        </header>
+
+        <nav className="website-tabs" aria-label="学院官网栏目">
+          <a href="#academy">首页</a>
+          <a href="#courses">学院介绍</a>
+          <a href="#missions">课程与探索</a>
+          <a href="#cadets">学员风采</a>
+          <a href="#family">家长中心</a>
+        </nav>
+
+        <section className="hero-website real-ui-hero" id="academy">
+          <div className="hero-copy">
+            <p className="eyebrow">新生招募 · 第一季</p>
+            <h2>欢迎来到动物城市警探学院！</h2>
+            <p>在这里学习知识、搜集线索，破解悬案，成为守护城市智慧的小警探。</p>
+            <button className="gold-action" onClick={onEnroll}>
+              加入警探学院
+              <span className="material-symbols-outlined">pets</span>
+            </button>
+          </div>
+          <figure className="hero-art">
+            <img src={`${ASSET}academy-campus.png`} alt="动物城市警探学院校园" />
+          </figure>
+        </section>
+
+        <section className="quick-entry" id="missions" aria-label="快速入口">
+          <FeatureButton icon="menu_book" title="学习课程" copy="三科知识变线索" />
+          <FeatureButton icon="search" title="探索任务" copy="公告、证物、暗号" />
+          <FeatureButton icon="map" title="城市地图" copy="章节区域逐步开放" />
+          <FeatureButton icon="workspace_premium" title="勋章成就" copy="记录成长和复盘" />
+        </section>
+
+        <section className="course-and-mentors" id="courses">
+          <div className="mentor-group-art">
+            <img src={`${ASSET}mentor-group.png`} alt="三位警探学院导师" />
+          </div>
+          <div className="course-band">
+            {mentors.map((mentor) => (
+              <article key={mentor.id} className="mentor-card" style={{ '--mentor-color': mentor.color } as CSSProperties}>
+                <div className="mentor-portrait">{mentor.portrait}</div>
+                <p>{mentor.title}</p>
+                <h3>{mentor.name}</h3>
+                <span>{mentor.motto}</span>
+              </article>
+            ))}
+          </div>
+        </section>
+      </section>
     </main>
   );
 }
 
 function EnrollScreen({ onSubmit }: { onSubmit: (name: string) => void }) {
   const [name, setName] = useState('小探员');
+  const [avatar, setAvatar] = useState('狐');
   const avatars = ['狐', '兔', '熊'];
 
   return (
-    <main className="reference-page">
-      <ReferenceFrame image="/ui-reference/enroll-reference.png" label="学员入学档案页面">
-        <form className="enroll-live-form" onSubmit={(event) => {
+    <main className="enroll-screen real-enroll-screen">
+      <section className="enroll-desk real-enroll-desk">
+        <div className="desk-art" aria-hidden="true">
+          <img src={`${ASSET}enrollment-desk.png`} alt="" />
+        </div>
+        <aside className="cadet-preview">
+          <div className="cadet-photo">
+            <span>{avatar}</span>
+          </div>
+          <b>选择我的形象</b>
+          <div className="avatar-list">
+            {avatars.map((item) => (
+              <button key={item} className={item === avatar ? 'active' : ''} onClick={() => setAvatar(item)}>{item}</button>
+            ))}
+          </div>
+          <p>MVP 仅保存在本机浏览器，不收集真实姓名、学校或照片。</p>
+        </aside>
+
+        <form className="clipboard profile-board real-profile-board" onSubmit={(event) => {
           event.preventDefault();
           onSubmit(name);
         }}>
-          <label className="sr-only" htmlFor="cadet-name">学员姓名</label>
-          <input id="cadet-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={8} />
-          <div className="enroll-live-row">
-            <button type="button" className="selected">男孩</button>
-            <button type="button">女孩</button>
+          <div className="clip" />
+          <p className="eyebrow">学员入学档案</p>
+          <h1>建立你的探员档案</h1>
+          <label>
+            学员姓名
+            <input value={name} onChange={(event) => setName(event.target.value)} maxLength={8} />
+          </label>
+          <div className="field-row">
+            <label>
+              性别
+              <select defaultValue="保密">
+                <option>保密</option>
+                <option>男孩</option>
+                <option>女孩</option>
+              </select>
+            </label>
+            <label>
+              年级
+              <select defaultValue="二年级">
+                <option>二年级</option>
+                <option>一年级</option>
+                <option>三年级</option>
+              </select>
+            </label>
           </div>
-          <select defaultValue="二年级" aria-label="年级">
-            <option>二年级</option>
-            <option>一年级</option>
-            <option>三年级</option>
-          </select>
-          <textarea defaultValue="我想成为一名会思考的小警探。" maxLength={30} aria-label="入学宣言" />
-          <button className="ref-hotspot enroll-submit-hotspot" type="submit">
+          <label>
+            入学宣言
+            <textarea defaultValue="我想成为一名会思考的小警探。" maxLength={30} />
+          </label>
+          <button className="green-action" type="submit">
             成为学员
             <span className="material-symbols-outlined">pets</span>
           </button>
         </form>
-        <div className="avatar-hotspots" aria-label="选择我的形象">
-          {avatars.map((avatar) => (
-            <button key={avatar} className={avatar === '狐' ? 'active' : ''}>{avatar}</button>
-          ))}
-        </div>
-      </ReferenceFrame>
+      </section>
     </main>
   );
 }
@@ -257,6 +344,7 @@ function BriefingScreen({ progress, onContinue }: { progress: Progress; onContin
           </button>
         </div>
         <div className="case-photo" aria-label="知识灯塔现场照片">
+          <img src={`${ASSET}case-desk.png`} alt="" />
           <LighthouseScene />
         </div>
       </section>
@@ -268,19 +356,37 @@ function MapScreen({ progress, onOpenCase }: { progress: Progress; onOpenCase: (
   const firstCaseDone = progress.completedCases.includes(openingCase.id);
 
   return (
-    <main className="reference-page map-reference-page">
-      <ReferenceFrame image="/ui-reference/map-reference.png" label="动物城市地图">
-        <button className="map-case-hotspot" onClick={onOpenCase}>
-          {firstCaseDone ? '复盘第一章' : '知识灯塔'}
-        </button>
-        <div className="map-progress-live">
-          <span>探案进度</span>
+    <main className="map-screen real-map-screen">
+      <section className="storybook-map real-storybook-map">
+        <div className="map-canvas real-map-canvas">
+          <img src={`${ASSET}city-map.png`} alt="动物城市地图" />
+          <div className="map-title">动物城市地图</div>
+          {chapters.map((chapter, index) => {
+            const open = chapter.status === 'open' || (chapter.requiredBadge && progress.badges.includes(chapter.requiredBadge));
+            const position = markerPositions[index] ?? { left: '50%', top: '50%' };
+            return (
+              <button
+                key={chapter.id}
+                className={`map-node real-map-node ${open ? 'open' : 'locked'} ${index === 0 ? 'featured' : ''}`}
+                style={position}
+                onClick={index === 0 ? onOpenCase : undefined}
+                disabled={index !== 0}
+              >
+                <span className="node-dot">{index + 1}</span>
+                <b>{chapter.area}</b>
+                <small>{index === 0 ? (firstCaseDone ? '复盘第一章' : '进入第一章') : '后续开放'}</small>
+              </button>
+            );
+          })}
+        </div>
+
+        <aside className="map-progress real-map-progress">
+          <CompassIcon />
+          <p>探案进度</p>
           <strong>{progress.completedCases.length ? '1/4' : '0/4'}</strong>
-        </div>
-        <div className="map-back-live" aria-hidden="true">
-          <span className="material-symbols-outlined">arrow_back</span>
-        </div>
-      </ReferenceFrame>
+          <span>{getRank(progress.xp)}</span>
+        </aside>
+      </section>
     </main>
   );
 }
@@ -299,18 +405,24 @@ function CaseScreen({
   onBoss: () => void;
 }) {
   return (
-    <main className="reference-page case-reference-page">
-      <ReferenceFrame image="/ui-reference/case-reference.png" label="线索挑战页面">
-        <div className="case-progress-live">
-          线索 {Math.min(progress.activeQuestionIndex + 1, openingCase.clueQuestionIds.length)}/{openingCase.clueQuestionIds.length}
-        </div>
-        {question ? (
-          <QuestionOverlay key={question.id} question={question} onAnswer={(selected) => onAnswer(question, selected)} />
-        ) : (
-          <button className="ref-hotspot case-submit-hotspot" onClick={onBoss}>进入 Boss 关</button>
-        )}
-        {lastResult && <FeedbackToast result={lastResult} />}
-      </ReferenceFrame>
+    <main className="case-screen real-case-screen">
+      <section className="case-desk-stage">
+        <img src={`${ASSET}case-desk.png`} alt="" aria-hidden="true" />
+        <aside className="case-file real-case-file">
+          <p className="eyebrow">{openingCase.subtitle}</p>
+          <h1>{openingCase.title}</h1>
+          <p>{openingCase.mystery}</p>
+          <ProgressRail current={progress.activeQuestionIndex} total={openingCase.clueQuestionIds.length} label="线索收集" />
+        </aside>
+        <section className="question-zone real-question-zone">
+          {question ? (
+            <QuestionPanel key={question.id} question={question} onAnswer={(selected) => onAnswer(question, selected)} />
+          ) : (
+            <CompletionPanel title="三条线索已经收齐" copy="现在可以进入 Boss 关，修复知识灯塔。" action="进入 Boss 关" onAction={onBoss} />
+          )}
+          {lastResult && <FeedbackPanel result={lastResult} />}
+        </section>
+      </section>
     </main>
   );
 }
@@ -374,7 +486,7 @@ function ReportScreen({ progress, onMap, onRestart }: { progress: Progress; onMa
             </div>
             <div>
               <dt>破案时间</dt>
-              <dd>2026-05-12</dd>
+              <dd>2026-05-13</dd>
             </div>
             <div>
               <dt>你的评价</dt>
@@ -389,7 +501,7 @@ function ReportScreen({ progress, onMap, onRestart }: { progress: Progress; onMa
         </div>
 
         <div className="badge-award">
-          <LighthouseBadge />
+          <img src={`${ASSET}lighthouse-badge.png`} alt="" />
           <strong>{openingCase.badge.name}</strong>
           <p>{openingCase.badge.description}</p>
         </div>
@@ -420,74 +532,6 @@ function ReportScreen({ progress, onMap, onRestart }: { progress: Progress; onMa
         )}
       </section>
     </main>
-  );
-}
-
-function ReferenceFrame({
-  image,
-  label,
-  children
-}: {
-  image: string;
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="reference-frame" aria-label={label}>
-      <img src={image} alt="" aria-hidden="true" />
-      <div className="reference-layer">
-        {children}
-      </div>
-    </section>
-  );
-}
-
-function QuestionOverlay({ question, onAnswer }: { question: Question; onAnswer: (selected: string | string[]) => void }) {
-  const [selected, setSelected] = useState<string | null>(null);
-  const mentor = mentors.find((item) => item.subject === question.subject)!;
-
-  return (
-    <section className="question-live-card" style={{ '--mentor-color': mentor.color } as CSSProperties}>
-      <header>
-        <span>{mentor.portrait}</span>
-        <div>
-          <b>{subjectName[question.subject]}</b>
-          <h2>{question.title}</h2>
-        </div>
-      </header>
-      <p>{question.story}</p>
-      <h3>{question.prompt}</h3>
-      <div className="question-live-options">
-        {question.options.map((option, index) => (
-          <button
-            key={option}
-            className={selected === option ? 'selected' : ''}
-            onClick={() => setSelected(option)}
-          >
-            <b>{String.fromCharCode(65 + index)}.</b>
-            {option}
-            <i />
-          </button>
-        ))}
-      </div>
-      <div className="question-live-hint">
-        <span className="material-symbols-outlined">tips_and_updates</span>
-        {question.hint}
-      </div>
-      <button className="ref-hotspot case-submit-hotspot" disabled={!selected} onClick={() => selected && onAnswer(selected)}>
-        提交线索
-        <span className="material-symbols-outlined">pets</span>
-      </button>
-    </section>
-  );
-}
-
-function FeedbackToast({ result }: { result: { question: Question; correct: boolean } }) {
-  return (
-    <aside className={`feedback-toast ${result.correct ? 'right' : 'wrong'}`}>
-      <b>{result.correct ? '线索有效' : '线索需要复查'}</b>
-      <span>{result.question.explanation}</span>
-    </aside>
   );
 }
 
@@ -525,13 +569,13 @@ function QuestionPanel({ question, onAnswer }: { question: Question; onAnswer: (
       <p className="story-text">{question.story}</p>
       <h3>{question.prompt}</h3>
       <div className="option-list">
-        {question.options.map((option) => (
+        {question.options.map((option, index) => (
           <button
             key={option}
             className={selected === option ? 'selected' : ''}
             onClick={() => setSelected(option)}
           >
-            <span>{option}</span>
+            <span><b>{String.fromCharCode(65 + index)}.</b> {option}</span>
             <i className="material-symbols-outlined">check_circle</i>
           </button>
         ))}
@@ -606,26 +650,6 @@ function FeatureButton({ icon, title, copy }: { icon: string; title: string; cop
   );
 }
 
-function AcademyIllustration() {
-  return (
-    <div className="academy-illustration" aria-hidden="true">
-      <div className="sun" />
-      <div className="cloud cloud-a" />
-      <div className="cloud cloud-b" />
-      <div className="building">
-        <span className="flag" />
-        <div className="tower">
-          <i />
-        </div>
-        <div className="hall">
-          <i /><i /><i />
-        </div>
-      </div>
-      <div className="trees" />
-    </div>
-  );
-}
-
 function LighthouseScene() {
   return (
     <div className="lighthouse-scene" aria-hidden="true">
@@ -641,15 +665,6 @@ function CompassIcon() {
   return (
     <div className="compass-icon" aria-hidden="true">
       <span />
-    </div>
-  );
-}
-
-function LighthouseBadge() {
-  return (
-    <div className="lighthouse-badge" aria-hidden="true">
-      <span className="material-symbols-outlined">emoji_events</span>
-      <i />
     </div>
   );
 }
