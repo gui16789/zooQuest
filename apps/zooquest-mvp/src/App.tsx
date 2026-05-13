@@ -24,6 +24,12 @@ const subjectIcon = {
   english: 'forum'
 } as const;
 
+const mentorImageById: Record<string, string> = {
+  'rabbit-captain': `${ASSET}mentor-rabbit.png`,
+  'buffalo-chief': `${ASSET}mentor-buffalo.png`,
+  'lark-officer': `${ASSET}mentor-lark.png`
+};
+
 const markerPositions = [
   { left: '31%', top: '63%' },
   { left: '29%', top: '28%' },
@@ -230,16 +236,15 @@ function HomeScreen({ onEnroll }: { onEnroll: () => void }) {
         </section>
 
         <section className="course-and-mentors" id="courses">
-          <div className="mentor-group-art">
-            <img src={`${ASSET}mentor-group.png`} alt="三位警探学院导师" />
-          </div>
           <div className="course-band">
             {mentors.map((mentor) => (
               <article key={mentor.id} className="mentor-card" style={{ '--mentor-color': mentor.color } as CSSProperties}>
-                <div className="mentor-portrait">{mentor.portrait}</div>
-                <p>{mentor.title}</p>
-                <h3>{mentor.name}</h3>
-                <span>{mentor.motto}</span>
+                <img className="mentor-portrait-photo" src={mentorImageById[mentor.id]} alt={mentor.name} />
+                <div className="mentor-card-copy">
+                  <p>{mentor.title}</p>
+                  <h3>{mentor.name}</h3>
+                  <span>{mentor.motto}</span>
+                </div>
               </article>
             ))}
           </div>
@@ -634,7 +639,9 @@ function AcademyCrest({ compact = false }: { compact?: boolean }) {
 function MentorMedallion({ mentor }: { mentor: (typeof mentors)[number] }) {
   return (
     <div className="mentor-medallion" style={{ '--mentor-color': mentor.color } as CSSProperties}>
-      <span>{mentor.portrait}</span>
+      <span>
+        <img src={mentorImageById[mentor.id]} alt="" />
+      </span>
       <b>{mentor.name}</b>
     </div>
   );
