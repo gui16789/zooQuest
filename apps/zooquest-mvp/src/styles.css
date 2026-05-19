@@ -694,6 +694,11 @@ button:disabled {
   border-color: var(--gold);
 }
 
+.district-grid article.selected {
+  border-color: var(--blue-2);
+  box-shadow: 0 0 0 5px rgba(47, 124, 197, 0.16);
+}
+
 .district-grid article.locked {
   filter: grayscale(0.45);
   opacity: 0.78;
@@ -718,6 +723,36 @@ button:disabled {
   background: var(--blue);
   color: white;
   font-weight: 800;
+}
+
+.district-detail {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(280px, 1.2fr) auto;
+  gap: 1rem;
+  align-items: center;
+  margin: 0 0 1.25rem;
+  padding: 1.25rem;
+  border: 2px solid rgba(47, 124, 197, 0.24);
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(241, 251, 255, 0.94)),
+    radial-gradient(circle at 92% 18%, rgba(244, 184, 63, 0.24), transparent 12rem);
+}
+
+.district-detail h2 {
+  margin: 0.25rem 0 0.5rem;
+  font-size: clamp(1.5rem, 3vw, 2.4rem);
+}
+
+.district-detail p,
+.district-detail ul {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.district-detail ul {
+  padding-left: 1.2rem;
 }
 
 @media (max-width: 900px) {
@@ -751,5 +786,9 @@ button:disabled {
 
   .direction-options {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .district-detail {
+    grid-template-columns: 1fr;
   }
 }

@@ -414,6 +414,9 @@ function RewardScreen({ progress, onMap }: { progress: Progress; onMap: () => vo
 }
 
 function CityMapScreen({ progress, onRestart }: { progress: Progress; onRestart: () => void }) {
+  const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null);
+  const selectedDistrict = cityDistricts.find((district) => district.id === selectedDistrictId);
+
   return (
     <main className="city-screen">
       <section className="city-map-card">
@@ -426,15 +429,43 @@ function CityMapScreen({ progress, onRestart }: { progress: Progress; onRestart:
           {cityDistricts.map((district) => {
             const open = district.status === 'open' || progress.unlockedDistricts.includes(district.id);
             return (
-              <article key={district.id} className={open ? 'open' : 'locked'}>
+              <article
+                key={district.id}
+                className={`${open ? 'open' : 'locked'} ${selectedDistrictId === district.id ? 'selected' : ''}`}
+              >
                 <span className="district-icon">{open ? '★' : '锁'}</span>
                 <h2>{district.name}</h2>
                 <p>{district.description}</p>
-                <button type="button" disabled={!open}>{open ? '查看区域' : '待解锁'}</button>
+                <button
+                  type="button"
+                  disabled={!open}
+                  onClick={() => open && setSelectedDistrictId(district.id)}
+                >
+                  {open ? '查看区域' : '待解锁'}
+                </button>
               </article>
             );
           })}
         </div>
+
+        {selectedDistrict && (
+          <section className="district-detail" aria-live="polite">
+            <div>
+              <p className="eyebrow">区域档案</p>
+              <h2>{selectedDistrict.name}</h2>
+              <p>{selectedDistrict.description}</p>
+            </div>
+            <ul>
+              <li>首案状态：导航机器人迷路案已结案</li>
+              <li>当前任务：整理中央广场巡逻记录</li>
+              <li>下一步：第二案将在后续迭代开放</li>
+            </ul>
+            <button type="button" className="secondary-action" onClick={() => setSelectedDistrictId(null)}>
+              收起区域详情
+            </button>
+          </section>
+        )}
+
         <button className="secondary-action" type="button" onClick={onRestart}>重新试玩首案</button>
       </section>
     </main>
