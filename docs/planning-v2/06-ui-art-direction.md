@@ -21,6 +21,7 @@
 - 首页首屏视觉主角：学院大门 + 牛局长欢迎。
 - 首案关键资产优先级：闭环优先。
 - 3 个小警探动物头像：使用图像生成工具生成疯狂动物城风格头像，内部原型使用。
+- 首轮关键资产参考图：`apps/zooquest-mvp/design/references/key-assets-reference-v1.png`。
 
 ## 2. 核心设计原则
 
@@ -388,15 +389,39 @@ UI 规则：
 
 2026-05-19 当前状态：
 
-- 内置 imagegen 调用失败。
+- 内置 imagegen 已恢复，并生成首轮关键资产参考图。
 - 本地 image-generate CLIProxyAPI 连接被拒绝，疑似本地图像代理未启动。
-- 因此本轮先冻结头像生成规格，暂未产出图片文件。
+- 已选参考图已复制到项目：`apps/zooquest-mvp/design/references/key-assets-reference-v1.png`。
 
 计划：
 
-- 图像生成通道恢复后，优先生成 3 个小警探头像。
+- 以已选参考图为视觉基准，优先生成 3 个小警探头像。
 - 生成后的项目资产建议路径：`apps/zooquest-mvp/public/assets/avatars/`。
 - 命名建议：
   - `cadet-rabbit-avatar.png`
   - `cadet-fox-avatar.png`
   - `cadet-<animal>-avatar.png`
+
+## 12. 参考图使用规则
+
+已选参考图：
+
+`apps/zooquest-mvp/design/references/key-assets-reference-v1.png`
+
+使用方式：
+
+- 用于统一动画电影感、警校色彩、牛局长形象、导航机器人方向和勋章质感。
+- 用于拆分生成正式资产时的风格参考。
+- 不直接作为页面背景使用。
+- 不从参考图中直接裁切最终可用 UI。
+- 不保留参考图中的排版边框作为正式页面结构。
+
+下一步正式资产拆分顺序建议：
+
+1. 3 个小警探头像。
+2. 牛局长 / 牛队长透明角色图。
+3. 导航机器人透明角色图。
+4. 导航修复勋章。
+5. 学院大门首页背景。
+6. 训练场路线地图背景与节点图标。
+7. 城市地图首屏背景。
