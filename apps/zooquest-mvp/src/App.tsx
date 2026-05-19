@@ -1,432 +1,357 @@
-import { CSSProperties, useMemo, useState } from 'react';
-import { chapters, mentors, openingCase, questionById } from './data/story';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  avatarOptions,
+  cityDistricts,
+  clueDescriptions,
+  firstCase,
+  navigationRepairMedal,
+  randomNicknames,
+  trainingConnections,
+  trainingNodes
+} from './data/firstCase';
 import {
   answerQuestion,
-  completeOpeningCase,
-  getCaseAccuracy,
+  clearProgress,
+  completeBossStep,
+  completeClue,
+  completeReasoning,
+  getCaseCompletion,
+  getCurrentClueIndex,
+  getQuestion,
   getRank,
-  getWrongAnswers,
-  initialProgress
+  initialProgress,
+  loadProgress,
+  markClueViewed,
+  persistProgress
 } from './domain/progress';
-import { Progress, Question, Screen } from './types';
+import { CaseQuestion, Progress, Screen, TrainingNode } from './types';
 
-const ASSET = '/assets/story/';
-
-const subjectName = {
-  chinese: '语文侦查',
-  math: '数学行动',
-  english: '英语通讯'
-} as const;
-
-const subjectIcon = {
-  chinese: 'menu_book',
-  math: 'calculate',
-  english: 'forum'
-} as const;
-
-const mentorImageById: Record<string, string> = {
-  'rabbit-captain': `${ASSET}mentor-rabbit-transparent.png`,
-  'buffalo-chief': `${ASSET}mentor-buffalo-transparent.png`,
-  'lark-officer': `${ASSET}mentor-lark-transparent.png`
+type Feedback = {
+  question: CaseQuestion;
+  selected: string;
+  correct: boolean;
 };
 
-const markerPositions = [
-  { left: '31%', top: '63%' },
-  { left: '29%', top: '28%' },
-  { left: '74%', top: '27%' },
-  { left: '66%', top: '70%' }
-];
-
-function getStoredProgress(): Progress {
-  try {
-    const raw = localStorage.getItem('zooquest-mvp-progress');
-    return raw ? { ...initialProgress, ...JSON.parse(raw) } : initialProgress;
-  } catch {
-    return initialProgress;
-  }
-}
+const directionLabels: Record<string, string> = {
+  east: '东',
+  south: '南',
+  west: '西',
+  north: '北'
+};
 
 export function App() {
-  const [screen, setScreen] = useState<Screen>('home');
-  const [progress, setProgress] = useState<Progress>(() => getStoredProgress());
-  const [lastResult, setLastResult] = useState<{ question: Question; correct: boolean } | null>(null);
+  const [progress, setProgressState] = useState<Progress>(() => loadProgress());
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
 
-  const clueQuestion = useMemo(() => {
-    const id = openingCase.clueQuestionIds[progress.activeQuestionIndex];
-    return id ? questionById.get(id) : undefined;
-  }, [progress.activeQuestionIndex]);
+  const currentQuestion = useMemo(
+    () => getQuestion(progress.currentQuestionId),
+    [progress.currentQuestionId]
+  );
 
-  const bossQuestion = useMemo(() => {
-    const id = openingCase.bossQuestionIds[progress.bossQuestionIndex];
-    return id ? questionById.get(id) : undefined;
-  }, [progress.bossQuestionIndex]);
-
-  const saveProgress = (next: Progress) => {
-    localStorage.setItem('zooquest-mvp-progress', JSON.stringify(next));
-    setProgress(next);
+  const setProgress = (next: Progress) => {
+    persistProgress(next);
+    setProgressState(next);
   };
 
-  const goScreen = (next: Screen) => {
-    setLastResult(null);
-    setScreen(next);
-  };
-
-  const enroll = (name: string) => {
-    const next = { ...initialProgress, cadetName: name.trim() || '小探员' };
-    saveProgress(next);
-    goScreen('briefing');
-  };
-
-  const submitClue = (question: Question, selected: string | string[]) => {
-    const next = answerQuestion(progress, question, selected);
-    const correct = next.answers.find((answer) => answer.questionId === question.id)?.correct ?? false;
-    setLastResult({ question, correct });
-    saveProgress({
-      ...next,
-      activeQuestionIndex: Math.min(progress.activeQuestionIndex + 1, openingCase.clueQuestionIds.length)
-    });
-    if (progress.activeQuestionIndex + 1 >= openingCase.clueQuestionIds.length) {
-      setScreen('boss');
-    }
-  };
-
-  const submitBoss = (question: Question, selected: string | string[]) => {
-    const answered = answerQuestion(progress, question, selected);
-    const correct = answered.answers.find((answer) => answer.questionId === question.id)?.correct ?? false;
-    setLastResult({ question, correct });
-
-    if (progress.bossQuestionIndex + 1 >= openingCase.bossQuestionIds.length) {
-      saveProgress(completeOpeningCase(answered));
-      setScreen('report');
-      return;
-    }
-
-    saveProgress({
-      ...answered,
-      bossQuestionIndex: progress.bossQuestionIndex + 1
-    });
+  const goTo = (screen: Screen) => {
+    setFeedback(null);
+    setProgress({ ...progress, currentScreen: screen });
   };
 
   const restart = () => {
-    localStorage.removeItem('zooquest-mvp-progress');
-    setProgress(initialProgress);
-    setLastResult(null);
-    setScreen('home');
+    clearProgress();
+    setFeedback(null);
+    setProgressState(initialProgress);
+  };
+
+  const submitAnswer = (question: CaseQuestion, selected: string) => {
+    const correct = selected === question.answer;
+    setFeedback({ question, selected, correct });
+
+    if (!correct) {
+      setProgress(answerQuestion(progress, question, selected));
+      return;
+    }
+
+    if (question.phase === 'clue') {
+      setProgress(completeClue(progress, question, selected));
+      return;
+    }
+
+    if (question.phase === 'reasoning') {
+      setProgress(completeReasoning(progress, question, selected));
+      return;
+    }
+
+    setProgress(completeBossStep(progress, question, selected));
   };
 
   return (
-    <div className={`app-shell screen-${screen}`}>
-      {screen !== 'home' && (
-        <StoryTopBar
-          progress={progress}
-          screen={screen}
-          onMap={() => goScreen('map')}
-          onRestart={restart}
-        />
+    <div className="app-shell">
+      {progress.currentScreen !== 'home' && (
+        <TopBar progress={progress} onMap={() => goTo('city-map')} onRestart={restart} />
       )}
 
-      {screen === 'home' && <HomeScreen onEnroll={() => goScreen('enroll')} />}
-      {screen === 'enroll' && <EnrollScreen onSubmit={enroll} />}
-      {screen === 'briefing' && <BriefingScreen progress={progress} onContinue={() => goScreen('map')} />}
-      {screen === 'map' && <MapScreen progress={progress} onOpenCase={() => goScreen('case')} />}
-      {screen === 'case' && (
-        <CaseScreen
+      {progress.currentScreen === 'home' && (
+        <HomeScreen onStart={() => goTo('enrollment')} />
+      )}
+      {progress.currentScreen === 'enrollment' && (
+        <EnrollmentScreen progress={progress} onSave={setProgress} />
+      )}
+      {progress.currentScreen === 'case-briefing' && (
+        <CaseBriefingScreen onContinue={() => goTo('clue-task')} />
+      )}
+      {progress.currentScreen === 'clue-task' && currentQuestion && (
+        <TrainingFieldScreen
           progress={progress}
-          question={clueQuestion}
-          lastResult={lastResult}
-          onAnswer={submitClue}
-          onBoss={() => goScreen('boss')}
+          question={currentQuestion}
+          feedback={feedback}
+          onAnswer={submitAnswer}
         />
       )}
-      {screen === 'boss' && (
-        <BossScreen
-          progress={progress}
-          question={bossQuestion}
-          lastResult={lastResult}
-          onAnswer={submitBoss}
-          onReport={() => goScreen('report')}
-        />
+      {progress.currentScreen === 'clue-board' && (
+        <ClueBoardScreen progress={progress} onProgress={setProgress} onContinue={() => goTo('reasoning')} />
       )}
-      {screen === 'report' && <ReportScreen progress={progress} onMap={() => goScreen('map')} onRestart={restart} />}
+      {progress.currentScreen === 'reasoning' && currentQuestion && (
+        <ReasoningScreen question={currentQuestion} feedback={feedback} onAnswer={submitAnswer} />
+      )}
+      {progress.currentScreen === 'boss' && currentQuestion && (
+        <BossScreen progress={progress} question={currentQuestion} feedback={feedback} onAnswer={submitAnswer} />
+      )}
+      {progress.currentScreen === 'reward' && (
+        <RewardScreen progress={progress} onMap={() => goTo('city-map')} />
+      )}
+      {progress.currentScreen === 'city-map' && (
+        <CityMapScreen progress={progress} onRestart={restart} />
+      )}
     </div>
   );
 }
 
-function StoryTopBar({
+function TopBar({
   progress,
-  screen,
   onMap,
   onRestart
 }: {
   progress: Progress;
-  screen: Screen;
   onMap: () => void;
   onRestart: () => void;
 }) {
+  const avatar = avatarOptions.find((item) => item.id === progress.cadet.avatarId) ?? avatarOptions[0];
+
   return (
-    <header className="story-topbar">
-      <div className="topbar-brand">
-        <AcademyCrest compact />
+    <header className="topbar">
+      <div className="cadet-chip">
+        <span className="avatar-dot" style={{ background: avatar.color }}>{avatar.animal}</span>
         <div>
-          <strong>ZooQuest 动物城市警探学院</strong>
-          <span>{progress.cadetName} · {getRank(progress.xp)} · {progress.xp} XP</span>
+          <strong>{progress.cadet.nickname || '警校新生'}</strong>
+          <small>{getRank(progress.xp)} · {progress.xp} XP</small>
         </div>
       </div>
-      <nav aria-label="主线导航">
-        <button onClick={onMap} disabled={screen === 'map'}>
-          <span className="material-symbols-outlined">map</span>
-          地图
-        </button>
-        <button onClick={onRestart}>
-          <span className="material-symbols-outlined">restart_alt</span>
-          重开
-        </button>
+      <nav aria-label="顶部导航">
+        <button type="button" onClick={onMap}>城市地图</button>
+        <button type="button" onClick={onRestart}>重新开始</button>
       </nav>
     </header>
   );
 }
 
-function HomeScreen({ onEnroll }: { onEnroll: () => void }) {
+function HomeScreen({ onStart }: { onStart: () => void }) {
   return (
-    <main className="official-home">
-      <section className="academy-site">
-        <header className="site-header">
-          <div className="brand-lockup">
-            <AcademyCrest />
-            <div>
-              <h1>ZooQuest 动物城市警探学院</h1>
-              <p>故事驱动 · 探案解谜 · 知识学习 · 成长徽章</p>
-            </div>
-          </div>
-          <div className="mentor-roster" aria-label="三位导师">
-            {mentors.map((mentor) => (
-              <MentorMedallion key={mentor.id} mentor={mentor} />
-            ))}
-          </div>
-        </header>
-
-        <nav className="website-tabs" aria-label="学院官网栏目">
-          <a href="#academy">首页</a>
-          <a href="#courses">学院介绍</a>
-          <a href="#missions">课程与探索</a>
-          <a href="#cadets">学员风采</a>
-          <a href="#family">家长中心</a>
-        </nav>
-
-        <section className="hero-website real-ui-hero" id="academy">
-          <div className="hero-copy">
-            <p className="eyebrow">新生招募 · 第一季</p>
-            <h2>欢迎来到动物城市警探学院！</h2>
-            <p>在这里学习知识、搜集线索，破解悬案，成为守护城市智慧的小警探。</p>
-            <button className="gold-action" onClick={onEnroll}>
-              加入警探学院
-              <span className="material-symbols-outlined">pets</span>
-            </button>
-          </div>
-          <figure className="hero-art">
-            <img src={`${ASSET}academy-campus.png`} alt="动物城市警探学院校园" />
-          </figure>
-        </section>
-
-        <section className="quick-entry" id="missions" aria-label="快速入口">
-          <FeatureButton icon="menu_book" title="学习课程" copy="三科知识变线索" />
-          <FeatureButton icon="search" title="探索任务" copy="公告、证物、暗号" />
-          <FeatureButton icon="map" title="城市地图" copy="章节区域逐步开放" />
-          <FeatureButton icon="workspace_premium" title="勋章成就" copy="记录成长和复盘" />
-        </section>
-
-        <section className="course-and-mentors" id="courses">
-          <div className="course-band">
-            {mentors.map((mentor) => (
-              <article key={mentor.id} className="mentor-card" style={{ '--mentor-color': mentor.color } as CSSProperties}>
-                <img className="mentor-portrait-photo" src={mentorImageById[mentor.id]} alt={mentor.name} />
-                <div className="mentor-card-copy">
-                  <p>{mentor.title}</p>
-                  <h3>{mentor.name}</h3>
-                  <span>{mentor.motto}</span>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
+    <main className="home-screen">
+      <section className="hero-stage">
+        <div className="academy-gate" aria-hidden="true">
+          <span className="gate-arch" />
+          <span className="gate-badge">ZQ</span>
+          <span className="campus-tower" />
+        </div>
+        <div className="hero-copy">
+          <p className="eyebrow">警官学院官网 · 新生招募</p>
+          <h1>加入动物城市警探学院</h1>
+          <p>跟随牛局长完成入学训练，用数学方向知识帮助导航机器人找回路线。</p>
+          <button className="primary-action" type="button" onClick={onStart}>加入警官学院</button>
+        </div>
+        <BuffaloMentorCard />
       </section>
     </main>
   );
 }
 
-function EnrollScreen({ onSubmit }: { onSubmit: (name: string) => void }) {
-  const [name, setName] = useState('小探员');
-  const [avatar, setAvatar] = useState('狐');
-  const avatars = ['狐', '兔', '熊'];
-
-  return (
-    <main className="enroll-screen real-enroll-screen">
-      <section className="enroll-desk real-enroll-desk">
-        <div className="desk-art" aria-hidden="true">
-          <img src={`${ASSET}enrollment-desk.png`} alt="" />
-        </div>
-        <aside className="cadet-preview">
-          <div className="cadet-photo">
-            <span>{avatar}</span>
-          </div>
-          <b>选择我的形象</b>
-          <div className="avatar-list">
-            {avatars.map((item) => (
-              <button key={item} className={item === avatar ? 'active' : ''} onClick={() => setAvatar(item)}>{item}</button>
-            ))}
-          </div>
-          <p>MVP 仅保存在本机浏览器，不收集真实姓名、学校或照片。</p>
-        </aside>
-
-        <form className="clipboard profile-board real-profile-board" onSubmit={(event) => {
-          event.preventDefault();
-          onSubmit(name);
-        }}>
-          <div className="clip" />
-          <p className="eyebrow">学员入学档案</p>
-          <h1>建立你的探员档案</h1>
-          <label>
-            学员姓名
-            <input value={name} onChange={(event) => setName(event.target.value)} maxLength={8} />
-          </label>
-          <div className="field-row">
-            <label>
-              性别
-              <select defaultValue="保密">
-                <option>保密</option>
-                <option>男孩</option>
-                <option>女孩</option>
-              </select>
-            </label>
-            <label>
-              年级
-              <select defaultValue="二年级">
-                <option>二年级</option>
-                <option>一年级</option>
-                <option>三年级</option>
-              </select>
-            </label>
-          </div>
-          <label>
-            入学宣言
-            <textarea defaultValue="我想成为一名会思考的小警探。" maxLength={30} />
-          </label>
-          <button className="green-action" type="submit">
-            成为学员
-            <span className="material-symbols-outlined">pets</span>
-          </button>
-        </form>
-      </section>
-    </main>
-  );
-}
-
-function BriefingScreen({ progress, onContinue }: { progress: Progress; onContinue: () => void }) {
-  return (
-    <main className="briefing-screen">
-      <section className="case-briefing">
-        <aside className="briefing-tabs" aria-label="案件资料">
-          <span className="active"><i className="material-symbols-outlined">description</i>案件档案</span>
-          <span><i className="material-symbols-outlined">backpack</i>线索背包</span>
-          <span><i className="material-symbols-outlined">flag</i>任务目标</span>
-        </aside>
-        <div className="briefing-paper">
-          <span className="pin pin-left" />
-          <span className="pin pin-right" />
-          <p className="eyebrow">晨雾警报</p>
-          <h1>知识灯塔失光案</h1>
-          <p>
-            {progress.cadetName}，欢迎来到动物城市警探学院。今天清晨，中央广场的知识灯塔只剩一点微光。
-            三位导师已经集合，你需要通过语文、数学和英语三条线索，找出干扰灯塔的幕后源头。
-          </p>
-          <div className="mission-box">
-            <b>任务目标</b>
-            <span>收集线索，找出原因，修复知识灯塔。</span>
-          </div>
-          <button className="gold-action" onClick={onContinue}>
-            开始探案
-            <span className="material-symbols-outlined">search</span>
-          </button>
-        </div>
-        <div className="case-photo" aria-label="知识灯塔现场照片">
-          <img src={`${ASSET}case-desk.png`} alt="" />
-          <LighthouseScene />
-        </div>
-      </section>
-    </main>
-  );
-}
-
-function MapScreen({ progress, onOpenCase }: { progress: Progress; onOpenCase: () => void }) {
-  const firstCaseDone = progress.completedCases.includes(openingCase.id);
-
-  return (
-    <main className="map-screen real-map-screen">
-      <section className="storybook-map real-storybook-map">
-        <div className="map-canvas real-map-canvas">
-          <img src={`${ASSET}city-map.png`} alt="动物城市地图" />
-          <div className="map-title">动物城市地图</div>
-          {chapters.map((chapter, index) => {
-            const open = chapter.status === 'open' || (chapter.requiredBadge && progress.badges.includes(chapter.requiredBadge));
-            const position = markerPositions[index] ?? { left: '50%', top: '50%' };
-            return (
-              <button
-                key={chapter.id}
-                className={`map-node real-map-node ${open ? 'open' : 'locked'} ${index === 0 ? 'featured' : ''}`}
-                style={position}
-                onClick={index === 0 ? onOpenCase : undefined}
-                disabled={index !== 0}
-              >
-                <span className="node-dot">{index + 1}</span>
-                <b>{chapter.area}</b>
-                <small>{index === 0 ? (firstCaseDone ? '复盘第一章' : '进入第一章') : '后续开放'}</small>
-              </button>
-            );
-          })}
-        </div>
-
-        <aside className="map-progress real-map-progress">
-          <CompassIcon />
-          <p>探案进度</p>
-          <strong>{progress.completedCases.length ? '1/4' : '0/4'}</strong>
-          <span>{getRank(progress.xp)}</span>
-        </aside>
-      </section>
-    </main>
-  );
-}
-
-function CaseScreen({
+function EnrollmentScreen({
   progress,
-  question,
-  lastResult,
-  onAnswer,
-  onBoss
+  onSave
 }: {
   progress: Progress;
-  question?: Question;
-  lastResult: { question: Question; correct: boolean } | null;
-  onAnswer: (question: Question, selected: string | string[]) => void;
-  onBoss: () => void;
+  onSave: (progress: Progress) => void;
+}) {
+  const [nickname, setNickname] = useState(progress.cadet.nickname);
+  const [avatarId, setAvatarId] = useState(progress.cadet.avatarId);
+
+  const randomName = () => {
+    const next = randomNicknames[Math.floor(Math.random() * randomNicknames.length)];
+    setNickname(next);
+  };
+
+  const submit = () => {
+    const trimmed = nickname.trim();
+    if (!trimmed) return;
+
+    onSave({
+      ...progress,
+      hasCreatedCadet: true,
+      cadet: { nickname: trimmed, avatarId },
+      currentScreen: 'case-briefing',
+      firstCaseStatus: 'available'
+    });
+  };
+
+  return (
+    <main className="panel-screen enrollment-screen">
+      <section className="id-card">
+        <p className="eyebrow">学员入学档案</p>
+        <h1>创建你的小警探</h1>
+
+        <label className="form-field">
+          <span>警探昵称</span>
+          <div className="nickname-row">
+            <input
+              value={nickname}
+              maxLength={12}
+              onChange={(event) => setNickname(event.target.value)}
+              placeholder="输入你的警探昵称"
+            />
+            <button type="button" onClick={randomName}>随机昵称</button>
+          </div>
+        </label>
+
+        <fieldset className="avatar-grid">
+          <legend>选择头像</legend>
+          {avatarOptions.map((avatar) => (
+            <button
+              type="button"
+              key={avatar.id}
+              className={avatarId === avatar.id ? 'selected' : ''}
+              onClick={() => setAvatarId(avatar.id)}
+            >
+              <span className="avatar-preview" style={{ background: avatar.color }}>{avatar.animal}</span>
+              <strong>{avatar.name}</strong>
+              <small>{avatar.description}</small>
+            </button>
+          ))}
+        </fieldset>
+
+        <button className="primary-action full" type="button" disabled={!nickname.trim()} onClick={submit}>
+          开始入学训练
+        </button>
+      </section>
+    </main>
+  );
+}
+
+function CaseBriefingScreen({ onContinue }: { onContinue: () => void }) {
+  return (
+    <main className="briefing-screen">
+      <section className="briefing-card">
+        <BuffaloMentorCard />
+        <article>
+          <p className="eyebrow">首案接案</p>
+          <h1>{firstCase.title}</h1>
+          <p>{firstCase.goal}</p>
+          <div className="reward-preview">
+            <MedalIcon />
+            <div>
+              <strong>{navigationRepairMedal.name}</strong>
+              <span>{navigationRepairMedal.description}</span>
+            </div>
+          </div>
+          <button className="primary-action" type="button" onClick={onContinue}>进入训练场</button>
+        </article>
+      </section>
+    </main>
+  );
+}
+
+function TrainingFieldScreen({
+  progress,
+  question,
+  feedback,
+  onAnswer
+}: {
+  progress: Progress;
+  question: CaseQuestion;
+  feedback: Feedback | null;
+  onAnswer: (question: CaseQuestion, selected: string) => void;
+}) {
+  const currentIndex = getCurrentClueIndex(progress);
+
+  return (
+    <main className="mission-screen">
+      <section className="training-layout">
+        <aside className="case-sidebar">
+          <p className="eyebrow">训练场线索</p>
+          <h1>{firstCase.title}</h1>
+          <ProgressSteps current={currentIndex + 1} total={firstCase.clueQuestionIds.length} label="线索节点" />
+          <p>按顺序点亮训练场节点，找出导航机器人迷路的原因。</p>
+        </aside>
+        <section className="map-and-question">
+          <TrainingMap activeQuestion={question} progress={progress} onMapAnswer={(selected) => onAnswer(question, selected)} />
+          <QuestionCard question={question} feedback={feedback} onAnswer={(selected) => onAnswer(question, selected)} />
+        </section>
+      </section>
+    </main>
+  );
+}
+
+function ClueBoardScreen({
+  progress,
+  onProgress,
+  onContinue
+}: {
+  progress: Progress;
+  onProgress: (progress: Progress) => void;
+  onContinue: () => void;
+}) {
+  const clues = progress.collectedClues;
+
+  return (
+    <main className="panel-screen">
+      <section className="clue-board">
+        <p className="eyebrow">独立线索板</p>
+        <h1>把线索连起来看看</h1>
+        <div className="clue-list">
+          {clues.map((clue) => (
+            <button
+              type="button"
+              key={clue}
+              className={progress.viewedClueIds.includes(clue) ? 'viewed' : ''}
+              onClick={() => onProgress(markClueViewed(progress, clue))}
+            >
+              <strong>{clue}</strong>
+              <span>{progress.viewedClueIds.includes(clue) ? clueDescriptions[clue] : '点击查看一句解释'}</span>
+            </button>
+          ))}
+        </div>
+        <button className="primary-action" type="button" onClick={onContinue}>开始推理</button>
+      </section>
+    </main>
+  );
+}
+
+function ReasoningScreen({
+  question,
+  feedback,
+  onAnswer
+}: {
+  question: CaseQuestion;
+  feedback: Feedback | null;
+  onAnswer: (question: CaseQuestion, selected: string) => void;
 }) {
   return (
-    <main className="case-screen real-case-screen">
-      <section className="case-desk-stage">
-        <img src={`${ASSET}case-desk.png`} alt="" aria-hidden="true" />
-        <aside className="case-file real-case-file">
-          <p className="eyebrow">{openingCase.subtitle}</p>
-          <h1>{openingCase.title}</h1>
-          <p>{openingCase.mystery}</p>
-          <ProgressRail current={progress.activeQuestionIndex} total={openingCase.clueQuestionIds.length} label="线索收集" />
-        </aside>
-        <section className="question-zone real-question-zone">
-          {question ? (
-            <QuestionPanel key={question.id} question={question} onAnswer={(selected) => onAnswer(question, selected)} />
-          ) : (
-            <CompletionPanel title="三条线索已经收齐" copy="现在可以进入 Boss 关，修复知识灯塔。" action="进入 Boss 关" onAction={onBoss} />
-          )}
-          {lastResult && <FeedbackPanel result={lastResult} />}
-        </section>
+    <main className="panel-screen">
+      <section className="reasoning-card">
+        <p className="eyebrow">轻量推理</p>
+        <h1>机器人为什么迷路？</h1>
+        <QuestionCard question={question} feedback={feedback} onAnswer={(selected) => onAnswer(question, selected)} />
       </section>
     </main>
   );
@@ -435,243 +360,263 @@ function CaseScreen({
 function BossScreen({
   progress,
   question,
-  lastResult,
-  onAnswer,
-  onReport
+  feedback,
+  onAnswer
 }: {
   progress: Progress;
-  question?: Question;
-  lastResult: { question: Question; correct: boolean } | null;
-  onAnswer: (question: Question, selected: string | string[]) => void;
-  onReport: () => void;
+  question: CaseQuestion;
+  feedback: Feedback | null;
+  onAnswer: (question: CaseQuestion, selected: string) => void;
 }) {
-  const hp = Math.max(0, 100 - Math.round((progress.bossQuestionIndex / openingCase.bossQuestionIds.length) * 100));
-
   return (
     <main className="boss-screen">
-      <section className="boss-status">
-        <div className="boss-mentor">牛</div>
-        <p className="eyebrow">Boss 关</p>
-        <h1>迷雾干扰源出现了。</h1>
-        <p>综合运用三门课程，把灯塔能量充满。</p>
-        <div className="boss-checks">
-          <span className="done">找出真正的原因</span>
-          <span className="done">完成解决方案</span>
-          <span>{progress.bossQuestionIndex}/{openingCase.bossQuestionIds.length}</span>
-        </div>
-        <div className="hp-bar"><span style={{ width: `${hp}%` }} /></div>
-        <b>干扰源能量 {hp}%</b>
-      </section>
-      <section className="question-zone">
-        {question ? (
-          <QuestionPanel key={question.id} question={question} onAnswer={(selected) => onAnswer(question, selected)} />
-        ) : (
-          <CompletionPanel title="知识灯塔重新亮起" copy="第一章结案，查看报告和勋章。" action="查看结案报告" onAction={onReport} />
-        )}
-        {lastResult && <FeedbackPanel result={lastResult} />}
-      </section>
-    </main>
-  );
-}
-
-function ReportScreen({ progress, onMap, onRestart }: { progress: Progress; onMap: () => void; onRestart: () => void }) {
-  const wrongAnswers = getWrongAnswers(progress);
-  const accuracy = getCaseAccuracy(progress);
-
-  return (
-    <main className="report-screen">
-      <section className="report-board">
-        <div className="report-notebook">
-          <p className="eyebrow">结案成功</p>
-          <h1>结案报告</h1>
-          <dl>
-            <div>
-              <dt>案件名称</dt>
-              <dd>{openingCase.title}</dd>
-            </div>
-            <div>
-              <dt>破案时间</dt>
-              <dd>2026-05-13</dd>
-            </div>
-            <div>
-              <dt>你的评价</dt>
-              <dd className="stars">★★★★★</dd>
-            </div>
-          </dl>
-          <div className="report-metrics">
-            <div><span>{progress.xp}</span><b>XP</b></div>
-            <div><span>{accuracy}%</span><b>准确率</b></div>
-            <div><span>{progress.badges.length}</span><b>勋章</b></div>
+      <section className="boss-layout">
+        <aside className="robot-stage">
+          <p className="eyebrow">Boss 修复</p>
+          <h1>混乱导航机器人</h1>
+          <div className="robot-figure" aria-hidden="true">
+            <span className="robot-eye left" />
+            <span className="robot-eye right" />
+            <span className="robot-question">?</span>
           </div>
-        </div>
-
-        <div className="badge-award">
-          <img src={`${ASSET}lighthouse-badge.png`} alt="" />
-          <strong>{openingCase.badge.name}</strong>
-          <p>{openingCase.badge.description}</p>
-        </div>
-
-        <div className="report-actions">
-          <button className="secondary-action" onClick={onRestart}>
-            <span className="material-symbols-outlined">article</span>
-            重新试玩
-          </button>
-          <button className="green-action" onClick={onMap}>
-            继续探案
-            <span className="material-symbols-outlined">arrow_forward</span>
-          </button>
-        </div>
-      </section>
-
-      <section className="review-card">
-        <h2>复盘手册</h2>
-        {wrongAnswers.length === 0 ? (
-          <p className="success-note">本次没有错题，可以继续挑战下一章。</p>
-        ) : (
-          wrongAnswers.map(({ answer, question }) => (
-            <article key={answer.questionId}>
-              <b>{question!.title}</b>
-              <p>{question!.explanation}</p>
-            </article>
-          ))
-        )}
+          <ProgressSteps current={progress.bossStep + 1} total={3} label="修复进度" />
+          <p>答错不会失败。牛局长会给你提示，继续修复就好。</p>
+        </aside>
+        <section className="boss-question-stack">
+          {question.interaction === 'map-node-click' && (
+            <TrainingMap
+              activeQuestion={question}
+              progress={progress}
+              onMapAnswer={(selected) => onAnswer(question, selected)}
+            />
+          )}
+          <QuestionCard question={question} feedback={feedback} onAnswer={(selected) => onAnswer(question, selected)} />
+        </section>
       </section>
     </main>
   );
 }
 
-function ProgressRail({ current, total, label }: { current: number; total: number; label: string }) {
+function RewardScreen({ progress, onMap }: { progress: Progress; onMap: () => void }) {
   return (
-    <div className="progress-rail">
-      <div>
-        <span>{label}</span>
-        <b>{Math.min(current, total)}/{total}</b>
-      </div>
-      <div className="rail-track">
-        <span style={{ width: `${Math.round((Math.min(current, total) / total) * 100)}%` }} />
-      </div>
-    </div>
+    <main className="panel-screen reward-screen">
+      <section className="reward-card">
+        <p className="eyebrow">结案成功</p>
+        <h1>城市地图已解锁</h1>
+        <MedalIcon large />
+        <strong>{navigationRepairMedal.name}</strong>
+        <p>{navigationRepairMedal.description}</p>
+        <div className="xp-card">获得 {progress.xp} XP · {getRank(progress.xp)}</div>
+        <button className="primary-action" type="button" onClick={onMap}>前往城市地图</button>
+      </section>
+    </main>
   );
 }
 
-function QuestionPanel({ question, onAnswer }: { question: Question; onAnswer: (selected: string | string[]) => void }) {
-  const [selected, setSelected] = useState<string | null>(null);
-  const mentor = mentors.find((item) => item.subject === question.subject)!;
+function CityMapScreen({ progress, onRestart }: { progress: Progress; onRestart: () => void }) {
+  return (
+    <main className="city-screen">
+      <section className="city-map-card">
+        <header>
+          <p className="eyebrow">动物城市地图</p>
+          <h1>中央广场开放了</h1>
+          <p>首案训练完成，接下来会从中央广场开始真正的城市办案。</p>
+        </header>
+        <div className="district-grid">
+          {cityDistricts.map((district) => {
+            const open = district.status === 'open' || progress.unlockedDistricts.includes(district.id);
+            return (
+              <article key={district.id} className={open ? 'open' : 'locked'}>
+                <span className="district-icon">{open ? '★' : '锁'}</span>
+                <h2>{district.name}</h2>
+                <p>{district.description}</p>
+                <button type="button" disabled={!open}>{open ? '查看区域' : '待解锁'}</button>
+              </article>
+            );
+          })}
+        </div>
+        <button className="secondary-action" type="button" onClick={onRestart}>重新试玩首案</button>
+      </section>
+    </main>
+  );
+}
+
+function QuestionCard({
+  question,
+  feedback,
+  onAnswer
+}: {
+  question: CaseQuestion;
+  feedback: Feedback | null;
+  onAnswer: (selected: string) => void;
+}) {
+  const [selected, setSelected] = useState('');
+  const isMapQuestion = question.interaction === 'map-node-click';
+  const isCurrentFeedback = feedback?.question.id === question.id;
+
+  useEffect(() => {
+    setSelected('');
+  }, [question.id]);
 
   return (
-    <article className="question-panel">
-      <header className="question-header" style={{ '--mentor-color': mentor.color } as CSSProperties}>
-        <div className="mini-portrait">{mentor.portrait}</div>
-        <div>
-          <span>{subjectName[question.subject]}</span>
-          <h2>{question.title}</h2>
+    <article className="question-card">
+      <p className="eyebrow">{question.title}</p>
+      <p className="scene-text">{question.sceneText}</p>
+      <h2>{question.prompt}</h2>
+
+      {!isMapQuestion && (
+        <div className={question.interaction === 'direction-button' ? 'direction-options' : 'choice-options'}>
+          {(question.options ?? []).map((option) => (
+            <button
+              type="button"
+              key={option}
+              className={selected === option ? 'selected' : ''}
+              onClick={() => setSelected(option)}
+            >
+              {option}
+            </button>
+          ))}
         </div>
-      </header>
-      <div className="clue-count">
-        <span className="material-symbols-outlined">{subjectIcon[question.subject]}</span>
-        线索笔记
-      </div>
-      <p className="story-text">{question.story}</p>
-      <h3>{question.prompt}</h3>
-      <div className="option-list">
-        {question.options.map((option, index) => (
-          <button
-            key={option}
-            className={selected === option ? 'selected' : ''}
-            onClick={() => setSelected(option)}
-          >
-            <span><b>{String.fromCharCode(65 + index)}.</b> {option}</span>
-            <i className="material-symbols-outlined">check_circle</i>
-          </button>
-        ))}
-      </div>
-      <div className="hint-strip">
-        <span className="material-symbols-outlined">tips_and_updates</span>
-        {question.hint}
-      </div>
-      <button className="green-action full-width" disabled={!selected} onClick={() => selected && onAnswer(selected)}>
-        提交线索
-        <span className="material-symbols-outlined">pets</span>
-      </button>
+      )}
+
+      {isMapQuestion && (
+        <p className="map-answer-note">请在路线节点图上点击正确终点。</p>
+      )}
+
+      {isCurrentFeedback && (
+        <FeedbackBox feedback={feedback} />
+      )}
+
+      {!isMapQuestion && (
+        <button
+          className="primary-action full"
+          type="button"
+          disabled={!selected}
+          onClick={() => selected && onAnswer(selected)}
+        >
+          提交答案
+        </button>
+      )}
     </article>
   );
 }
 
-function FeedbackPanel({ result }: { result: { question: Question; correct: boolean } }) {
+function FeedbackBox({ feedback }: { feedback: Feedback }) {
   return (
-    <aside className={`feedback-panel ${result.correct ? 'right' : 'wrong'}`}>
-      <b>{result.correct ? '线索有效' : '线索需要复查'}</b>
-      <p>{result.question.explanation}</p>
+    <aside className={`feedback-box ${feedback.correct ? 'correct' : 'wrong'}`}>
+      <strong>{feedback.correct ? '方向正确' : '再试一次'}</strong>
+      <p>{feedback.correct ? feedback.question.explanation : feedback.question.hint}</p>
     </aside>
   );
 }
 
-function CompletionPanel({
-  title,
-  copy,
-  action,
-  onAction
+function TrainingMap({
+  activeQuestion,
+  progress,
+  onMapAnswer
 }: {
-  title: string;
-  copy: string;
-  action: string;
-  onAction: () => void;
+  activeQuestion?: CaseQuestion;
+  progress: Progress;
+  onMapAnswer?: (nodeId: string) => void;
 }) {
-  return (
-    <section className="completion-panel">
-      <span className="material-symbols-outlined">verified</span>
-      <h2>{title}</h2>
-      <p>{copy}</p>
-      <button className="gold-action" onClick={onAction}>{action}</button>
-    </section>
-  );
-}
+  const activeClueIndex = getCurrentClueIndex(progress);
 
-function AcademyCrest({ compact = false }: { compact?: boolean }) {
+  const nodeStatus = (node: TrainingNode): 'locked' | 'active' | 'complete' => {
+    if (activeQuestion?.interaction === 'map-node-click') {
+      if (node.id === activeQuestion.startNodeId) return 'active';
+      return 'locked';
+    }
+    const nodeIndex = ['check-in', 'equipment', 'sign-tower', 'command-screen'].indexOf(node.id);
+    if (nodeIndex >= 0) {
+      if (nodeIndex < activeClueIndex) return 'complete';
+      if (nodeIndex === activeClueIndex) return 'active';
+      return 'locked';
+    }
+    return progress.firstCaseStatus === 'completed' ? 'complete' : 'locked';
+  };
+
   return (
-    <div className={`academy-crest ${compact ? 'compact' : ''}`}>
-      <span className="material-symbols-outlined">local_police</span>
-      <b>ZQ</b>
+    <div className="training-map" aria-label="训练场路线节点图">
+      {trainingConnections.map((connection) => {
+        const from = trainingNodes.find((node) => node.id === connection.from)!;
+        const to = trainingNodes.find((node) => node.id === connection.to)!;
+        return (
+          <span
+            key={`${connection.from}-${connection.to}`}
+            className={`map-line ${connection.direction}`}
+            style={{
+              left: `${Math.min(from.x, to.x)}%`,
+              top: `${Math.min(from.y, to.y)}%`,
+              width: `${Math.abs(from.x - to.x) || 4}%`,
+              height: `${Math.abs(from.y - to.y) || 4}%`
+            }}
+          >
+            <i>{directionLabels[connection.direction]}</i>
+          </span>
+        );
+      })}
+      {trainingNodes.map((node) => {
+        const status = nodeStatus(node);
+        const clickable = activeQuestion?.interaction === 'map-node-click' && node.id !== activeQuestion.startNodeId;
+        return (
+          <button
+            type="button"
+            key={node.id}
+            className={`map-node ${status} ${clickable ? 'selectable' : ''}`}
+            style={{ left: `${node.x}%`, top: `${node.y}%` }}
+            disabled={!clickable}
+            onClick={() => clickable && onMapAnswer?.(node.id)}
+          >
+            <span>{node.name}</span>
+          </button>
+        );
+      })}
+      <Compass />
     </div>
   );
 }
 
-function MentorMedallion({ mentor }: { mentor: (typeof mentors)[number] }) {
+function ProgressSteps({ current, total, label }: { current: number; total: number; label: string }) {
+  const safeCurrent = Math.min(current, total);
   return (
-    <div className="mentor-medallion" style={{ '--mentor-color': mentor.color } as CSSProperties}>
-      <span>
-        <img src={mentorImageById[mentor.id]} alt="" />
-      </span>
-      <b>{mentor.name}</b>
+    <div className="progress-steps">
+      <div>
+        <span>{label}</span>
+        <strong>{safeCurrent}/{total}</strong>
+      </div>
+      <div className="step-track">
+        <span style={{ width: `${(safeCurrent / total) * 100}%` }} />
+      </div>
     </div>
   );
 }
 
-function FeatureButton({ icon, title, copy }: { icon: string; title: string; copy: string }) {
+function BuffaloMentorCard() {
   return (
-    <a href="#courses">
-      <span className="material-symbols-outlined">{icon}</span>
-      <b>{title}</b>
-      <small>{copy}</small>
-    </a>
+    <aside className="mentor-card">
+      <div className="buffalo-placeholder" aria-hidden="true">牛</div>
+      <div>
+        <strong>{firstCase.mentorName}</strong>
+        <span>{firstCase.mentorTitle}</span>
+      </div>
+    </aside>
   );
 }
 
-function LighthouseScene() {
+function MedalIcon({ large = false }: { large?: boolean }) {
   return (
-    <div className="lighthouse-scene" aria-hidden="true">
-      <span className="moon" />
-      <span className="beam" />
-      <span className="tower" />
-      <span className="rocks" />
+    <div className={`medal-icon ${large ? 'large' : ''}`} aria-hidden="true">
+      <span>↔</span>
+      <i>↕</i>
     </div>
   );
 }
 
-function CompassIcon() {
+function Compass() {
   return (
-    <div className="compass-icon" aria-hidden="true">
-      <span />
+    <div className="compass" aria-hidden="true">
+      <b>北</b>
+      <span>东</span>
     </div>
   );
 }

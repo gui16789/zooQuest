@@ -1,70 +1,114 @@
-export type Screen = 'home' | 'enroll' | 'briefing' | 'map' | 'case' | 'boss' | 'report';
+export type Screen =
+  | 'home'
+  | 'enrollment'
+  | 'case-briefing'
+  | 'clue-task'
+  | 'clue-board'
+  | 'reasoning'
+  | 'boss'
+  | 'reward'
+  | 'city-map';
 
-export type Subject = 'chinese' | 'math' | 'english';
+export type Subject = 'math';
 
-export type QuestionType = 'choice' | 'sequence';
+export type Difficulty = 'A' | 'B';
 
-export interface Mentor {
+export type QuestionPhase = 'clue' | 'reasoning' | 'boss';
+
+export type QuestionInteraction = 'direction-button' | 'map-node-click' | 'choice';
+
+export type NodeStatus = 'locked' | 'active' | 'complete';
+
+export interface AvatarOption {
   id: string;
   name: string;
-  title: string;
-  subject: Subject;
+  animal: string;
+  description: string;
   color: string;
-  portrait: string;
-  motto: string;
 }
 
-export interface Question {
+export interface TrainingNode {
   id: string;
+  name: string;
+  x: number;
+  y: number;
+}
+
+export interface TrainingConnection {
+  from: string;
+  to: string;
+  direction: 'east' | 'south' | 'north' | 'west';
+}
+
+export interface CaseQuestion {
+  id: string;
+  phase: QuestionPhase;
+  order: number;
   subject: Subject;
-  type: QuestionType;
+  textbook: '北师大数学二年级下册';
+  unit: '方向与位置';
+  knowledgePoint: '东南西北' | '路线移动' | '方位判断' | '路线纠错' | '原因判断';
+  difficulty: Difficulty;
+  interaction: QuestionInteraction;
   title: string;
-  story: string;
+  sceneText: string;
   prompt: string;
-  options: string[];
-  answer: string | string[];
+  options?: string[];
+  answer: string;
   hint: string;
   explanation: string;
-  xp: number;
+  clueReward?: string;
+  startNodeId?: string;
 }
 
-export interface Chapter {
+export interface FirstCase {
   id: string;
-  title: string;
-  area: string;
-  status: 'open' | 'locked';
-  summary: string;
-  requiredBadge?: string;
-}
-
-export interface CaseFile {
-  id: string;
-  chapterId: string;
   title: string;
   subtitle: string;
-  mystery: string;
-  mapLabel: string;
+  mentorName: string;
+  mentorTitle: string;
+  goal: string;
+  rewardBadgeId: string;
   clueQuestionIds: string[];
+  reasoningQuestionId: string;
   bossQuestionIds: string[];
-  badge: {
-    id: string;
-    name: string;
-    description: string;
-  };
+}
+
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface District {
+  id: string;
+  name: string;
+  status: 'open' | 'locked';
+  description: string;
 }
 
 export interface AnswerRecord {
   questionId: string;
-  selected: string | string[];
+  selected: string;
   correct: boolean;
 }
 
+export interface CadetProfile {
+  nickname: string;
+  avatarId: string;
+}
+
 export interface Progress {
-  cadetName: string;
-  xp: number;
-  badges: string[];
-  completedCases: string[];
+  hasCreatedCadet: boolean;
+  cadet: CadetProfile;
+  currentScreen: Screen;
+  firstCaseStatus: 'available' | 'in_progress' | 'completed';
+  currentQuestionId?: string;
+  collectedClues: string[];
+  viewedClueIds: string[];
   answers: AnswerRecord[];
-  activeQuestionIndex: number;
-  bossQuestionIndex: number;
+  bossStep: 0 | 1 | 2 | 3;
+  xp: number;
+  unlockedMedals: string[];
+  unlockedDistricts: string[];
 }

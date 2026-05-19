@@ -1,73 +1,174 @@
-import { openingCase, questionById } from '../data/story';
-import { Progress, Question } from '../types';
+import {
+  avatarOptions,
+  caseQuestions,
+  cityDistricts,
+  firstCase,
+  navigationRepairMedal,
+  questionById
+} from '../data/firstCase';
+import { CaseQuestion, Progress } from '../types';
+
+const STORAGE_KEY = 'zooquest-mvp-first-loop-progress';
 
 export const initialProgress: Progress = {
-  cadetName: '小探员',
-  xp: 0,
-  badges: [],
-  completedCases: [],
+  hasCreatedCadet: false,
+  cadet: {
+    nickname: '',
+    avatarId: avatarOptions[0].id
+  },
+  currentScreen: 'home',
+  firstCaseStatus: 'available',
+  currentQuestionId: firstCase.clueQuestionIds[0],
+  collectedClues: [],
+  viewedClueIds: [],
   answers: [],
-  activeQuestionIndex: 0,
-  bossQuestionIndex: 0
+  bossStep: 0,
+  xp: 0,
+  unlockedMedals: [],
+  unlockedDistricts: []
 };
 
-export function getRank(xp: number) {
-  if (xp >= 260) return '传奇预备警探';
-  if (xp >= 160) return '正式小警员';
-  if (xp >= 80) return '初级探员';
-  return '见习探员';
+export function loadProgress(): Progress {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return initialProgress;
+    return { ...initialProgress, ...JSON.parse(raw) };
+  } catch {
+    return initialProgress;
+  }
 }
 
-export function isCorrect(question: Question, selected: string | string[]) {
-  if (Array.isArray(question.answer)) {
-    return Array.isArray(selected) && question.answer.join('|') === selected.join('|');
-  }
+export function persistProgress(progress: Progress) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+}
+
+export function clearProgress() {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+export function getRank(xp: number) {
+  if (xp >= 180) return '城市见习警探';
+  if (xp >= 90) return '路线训练员';
+  return '警校新生';
+}
+
+export function getQuestion(id?: string) {
+  return id ? questionById.get(id) : undefined;
+}
+
+export function getCurrentClueIndex(progress: Progress) {
+  return Math.max(
+    0,
+    firstCase.clueQuestionIds.findIndex((id) => id === progress.currentQuestionId)
+  );
+}
+
+export function getNextClueId(currentQuestionId?: string) {
+  const index = firstCase.clueQuestionIds.findIndex((id) => id === currentQuestionId);
+  return firstCase.clueQuestionIds[index + 1];
+}
+
+export function isAnswerCorrect(question: CaseQuestion, selected: string) {
   return selected === question.answer;
 }
 
-export function answerQuestion(progress: Progress, question: Question, selected: string | string[]) {
-  const correct = isCorrect(question, selected);
-  const alreadyAnswered = progress.answers.some((answer) => answer.questionId === question.id);
+export function answerQuestion(progress: Progress, question: CaseQuestion, selected: string) {
+  const correct = isAnswerCorrect(question, selected);
+  const priorCorrect = progress.answers.some((answer) => answer.questionId === question.id && answer.correct);
   const answers = [
     ...progress.answers.filter((answer) => answer.questionId !== question.id),
     { questionId: question.id, selected, correct }
   ];
 
+  const reward = correct && question.clueReward && !progress.collectedClues.includes(question.clueReward)
+    ? [question.clueReward]
+    : [];
+
   return {
     ...progress,
     answers,
-    xp: alreadyAnswered ? progress.xp : progress.xp + (correct ? question.xp : 5)
+    collectedClues: [...progress.collectedClues, ...reward],
+    xp: correct && !priorCorrect ? progress.xp + 20 : progress.xp
   };
 }
 
-export function completeOpeningCase(progress: Progress) {
-  const badges = progress.badges.includes(openingCase.badge.id)
-    ? progress.badges
-    : [...progress.badges, openingCase.badge.id];
-  const completedCases = progress.completedCases.includes(openingCase.id)
-    ? progress.completedCases
-    : [...progress.completedCases, openingCase.id];
+export function completeClue(progress: Progress, question: CaseQuestion, selected: string): Progress {
+  const answered = answerQuestion(progress, question, selected);
+  const nextClueId = getNextClueId(question.id);
+
+  if (nextClueId) {
+    return {
+      ...answered,
+      currentQuestionId: nextClueId,
+      firstCaseStatus: 'in_progress'
+    };
+  }
 
   return {
-    ...progress,
-    badges,
-    completedCases
+    ...answered,
+    currentQuestionId: firstCase.reasoningQuestionId,
+    currentScreen: 'clue-board',
+    firstCaseStatus: 'in_progress'
   };
 }
 
-export function getCaseAccuracy(progress: Progress) {
-  const questionIds = [...openingCase.clueQuestionIds, ...openingCase.bossQuestionIds];
-  const records = progress.answers.filter((answer) => questionIds.includes(answer.questionId));
-  if (records.length === 0) return 0;
-  return Math.round((records.filter((answer) => answer.correct).length / records.length) * 100);
+export function completeReasoning(progress: Progress, question: CaseQuestion, selected: string): Progress {
+  const answered = answerQuestion(progress, question, selected);
+  return {
+    ...answered,
+    currentQuestionId: firstCase.bossQuestionIds[0],
+    currentScreen: 'boss'
+  };
 }
 
-export function getWrongAnswers(progress: Progress) {
-  return progress.answers
-    .filter((answer) => !answer.correct)
-    .map((answer) => ({
-      answer,
-      question: questionById.get(answer.questionId)
-    }))
-    .filter((item) => item.question);
+export function completeBossStep(progress: Progress, question: CaseQuestion, selected: string): Progress {
+  const answered = answerQuestion(progress, question, selected);
+  const nextStep = Math.min(3, progress.bossStep + 1) as Progress['bossStep'];
+  const nextQuestionId = firstCase.bossQuestionIds[nextStep];
+
+  if (nextQuestionId) {
+    return {
+      ...answered,
+      bossStep: nextStep,
+      currentQuestionId: nextQuestionId
+    };
+  }
+
+  return completeFirstCase({
+    ...answered,
+    bossStep: 3,
+    currentQuestionId: undefined
+  });
+}
+
+export function completeFirstCase(progress: Progress): Progress {
+  return {
+    ...progress,
+    currentScreen: 'reward',
+    firstCaseStatus: 'completed',
+    xp: Math.max(progress.xp, 180),
+    unlockedMedals: progress.unlockedMedals.includes(navigationRepairMedal.id)
+      ? progress.unlockedMedals
+      : [...progress.unlockedMedals, navigationRepairMedal.id],
+    unlockedDistricts: progress.unlockedDistricts.includes(cityDistricts[0].id)
+      ? progress.unlockedDistricts
+      : [...progress.unlockedDistricts, cityDistricts[0].id]
+  };
+}
+
+export function markClueViewed(progress: Progress, clueId: string): Progress {
+  if (progress.viewedClueIds.includes(clueId)) return progress;
+  return {
+    ...progress,
+    viewedClueIds: [...progress.viewedClueIds, clueId]
+  };
+}
+
+export function getAnsweredQuestion(progress: Progress, questionId: string) {
+  return progress.answers.find((answer) => answer.questionId === questionId);
+}
+
+export function getCaseCompletion(progress: Progress) {
+  const total = caseQuestions.length;
+  return Math.round((progress.answers.length / total) * 100);
 }
