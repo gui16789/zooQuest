@@ -2,6 +2,19 @@
 
 本目录用于保证“警官学院闯关学习游戏”的目标、范围、节奏和交接信息可追踪。
 
+## 当前推荐阅读
+
+项目已暂停继续堆页面，进入需求重新确认阶段。请优先阅读：
+
+1. [planning-v2/README.md](./planning-v2/README.md)：正式规划 v2 的入口。
+2. [planning-v2/00-planning-workflow.md](./planning-v2/00-planning-workflow.md)：逐步确认和冻结规则。
+3. [planning-v2/01-decision-workbook.md](./planning-v2/01-decision-workbook.md)：需要项目负责人拍板的关键问题。
+4. [planning-v2/02-product-north-star.md](./planning-v2/02-product-north-star.md)：产品北极星草案。
+
+以下旧文档先作为历史草稿和素材库，不直接作为下一轮开发依据，除非对应内容已在 `planning-v2` 中重新确认。
+
+## 历史草稿
+
 建议阅读顺序：
 
 1. [01-prd.md](./01-prd.md)：产品定位、用户、核心玩法、功能范围、验收指标。
