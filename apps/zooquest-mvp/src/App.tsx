@@ -25,9 +25,9 @@ const subjectIcon = {
 } as const;
 
 const mentorImageById: Record<string, string> = {
-  'rabbit-captain': `${ASSET}mentor-rabbit.png`,
-  'buffalo-chief': `${ASSET}mentor-buffalo.png`,
-  'lark-officer': `${ASSET}mentor-lark.png`
+  'rabbit-captain': `${ASSET}mentor-rabbit-transparent.png`,
+  'buffalo-chief': `${ASSET}mentor-buffalo-transparent.png`,
+  'lark-officer': `${ASSET}mentor-lark-transparent.png`
 };
 
 const markerPositions = [
