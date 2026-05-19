@@ -392,6 +392,8 @@ UI 规则：
 - 内置 imagegen 已恢复，并生成首轮关键资产参考图。
 - 本地 image-generate CLIProxyAPI 连接被拒绝，疑似本地图像代理未启动。
 - 已选参考图已复制到项目：`apps/zooquest-mvp/design/references/key-assets-reference-v1.png`。
+- 后续尝试继续生成 3 个头像时，内置 imagegen 再次返回错误；本地 CLIProxyAPI 仍连接被拒绝。
+- 已建立资产生成提示词清单：`apps/zooquest-mvp/design/asset-prompts/first-loop-assets.md`。
 
 计划：
 
