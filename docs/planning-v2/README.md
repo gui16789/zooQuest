@@ -14,8 +14,8 @@
 1. [00-planning-workflow.md](./00-planning-workflow.md)：项目规划流程、冻结规则、交接方式。
 2. [01-decision-workbook.md](./01-decision-workbook.md)：需要项目负责人拍板的问题清单。
 3. [02-product-north-star.md](./02-product-north-star.md)：产品北极星、核心体验、成功标准草案。
-4. 后续待补：
-   - `03-game-design.md`：世界观、主线剧情、案件结构、成长系统。
+4. [03-game-design.md](./03-game-design.md)：世界观、主线剧情、案件结构、成长系统。
+5. 后续待补：
    - `04-curriculum-design.md`：三门课程、教材知识点、题型映射。
    - `05-information-architecture.md`：页面流、导航、状态、用户路径。
    - `06-ui-art-direction.md`：视觉方向、资产分层、组件规范。
@@ -26,4 +26,3 @@
 - 开发暂停：不继续扩大 MVP 页面和功能。
 - 当前前端实现只作为体验参考，不作为最终信息架构依据。
 - 第一轮需要先确认：IP/世界观方向、MVP 核心验证目标、规划文档推进粒度。
-
