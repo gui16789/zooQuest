@@ -18,8 +18,7 @@
 5. [04-curriculum-design.md](./04-curriculum-design.md)：三门课程、教材知识点、题型映射。
 6. [05-information-architecture.md](./05-information-architecture.md)：页面流、导航、状态、用户路径。
 7. [06-ui-art-direction.md](./06-ui-art-direction.md)：视觉方向、资产分层、组件规范。
-8. 后续待补：
-   - `07-mvp-scope.md`：MVP 范围、里程碑、验收标准。
+8. [07-mvp-scope.md](./07-mvp-scope.md)：MVP 范围、里程碑、验收标准。
 
 ## 当前状态
 
